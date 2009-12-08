@@ -16,15 +16,19 @@
         (= :class command)
           klass
         :else
-          ((klass :method command) args)))))
+          (apply (klass :method command) args)))))
 
 (defn new-class [class-name parent methods]
   (let [klass (k-resolve class-name)]
-    (fn [command]
+    (fn [command & args]
       (cond
 	(= :parent command) parent
 	(= :name command) klass
+	(= :methods command) (keys methods)
 	(= :new command) (new-object klass)
+	(= :method command) 
+          (let [[method-name] args]
+	    (methods method-name))
 	:else (throw (RuntimeException. (str "Unknown message: " command)))))))
 
 (def OBJECT (new-class :org.rathore.amit.frumios.core/OBJECT nil []))
@@ -41,8 +45,21 @@
 	  (throw (RuntimeException. "the extends clause only accepts a single parent class")))
 	(last extends)))))
 
+(defn method [sexpr]
+  (let [name (keyword (second sexpr))
+	remaining (next sexpr)]
+    {name (conj remaining 'fn)}))
+
+(defn methods-as-hash [sexprs]
+  (apply merge (map method sexprs)))
+
+(defn method-specs [sexprs]
+  (let [method? #(= 'method (first %))]
+    (filter method? sexprs)))
+
 (defmacro defclass [class-name & specs]
   (let [parent-class-symbol (parent-class-spec specs)
-        this-class-name (keyword class-name)]
+        this-class-name (keyword class-name)
+	fns (methods-as-hash (method-specs specs))]
     `(def ~class-name 
-	  (new-class ~this-class-name (var ~parent-class-symbol) []))))
+	  (new-class ~this-class-name (var ~parent-class-symbol) ~fns))))
