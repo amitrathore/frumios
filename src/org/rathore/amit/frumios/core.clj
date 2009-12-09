@@ -16,7 +16,16 @@
         (= :class command)
           klass
         :else
-          (apply (klass :method command) args)))))
+          (let [method (klass :method command)]
+	    (if method 
+	      (apply method args)))))))
+
+(defn find-method [method-name instance-methods parent-class]
+  (let [method (instance-methods method-name)]
+    (if method
+      method
+      (if-not (= #'org.rathore.amit.frumios.core/OBJECT parent-class)
+	(find-method method-name (parent-class :methods) (parent-class :parent))))))
 
 (defn new-class [class-name parent methods]
   (let [klass (k-resolve class-name)]
@@ -24,14 +33,15 @@
       (cond
 	(= :parent command) parent
 	(= :name command) klass
-	(= :methods command) (keys methods)
+	(= :method-names command) (keys methods)
+	(= :methods command) methods
 	(= :new command) (new-object klass)
 	(= :method command) 
           (let [[method-name] args]
-	    (methods method-name))
+	    (find-method method-name methods parent))
 	:else (throw (RuntimeException. (str "Unknown message: " command)))))))
 
-(def OBJECT (new-class :org.rathore.amit.frumios.core/OBJECT nil []))
+(def OBJECT (new-class :org.rathore.amit.frumios.core/OBJECT nil {}))
 
 (defn parent-class-spec [sexprs]
   (let [extends-spec (filter #(= :extends (first %)) sexprs)
@@ -60,6 +70,7 @@
 (defmacro defclass [class-name & specs]
   (let [parent-class-symbol (parent-class-spec specs)
         this-class-name (keyword class-name)
-	fns (methods-as-hash (method-specs specs))]
+	fns (methods-as-hash (method-specs specs))
+	fns (or fns {})]
     `(def ~class-name 
 	  (new-class ~this-class-name (var ~parent-class-symbol) ~fns))))

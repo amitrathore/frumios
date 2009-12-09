@@ -37,8 +37,12 @@
   (is (= 2 (adi :get :age))))
 
 (deftest can-specify-methods
-  (= '(:experience :age :dob :greet) (person :methods)))
+  (= '(:experience :age :dob :greet) (person :method-names)))
 
 (deftest can-call-methods
   (is (= 2 (kyle :age)))
   (is (= "12 years" (kyle :experience 12))))
+
+(deftest can-call-parent-methods
+  (is (= 2 (adi :age)))
+  (is (= "12 years" (adi :experience 12))))
