@@ -2,10 +2,8 @@
 
 (declare new-object find-method) 
 
-(def resolve-from-keyword (comp resolve symbol name))
-
 (defn new-class [class-name parent methods]
-  (let [klass (resolve-from-keyword class-name)]
+  (let [klass ((comp resolve symbol name) class-name)]
     (fn [command & args]
       (cond
 	(= :parent command) parent
@@ -38,10 +36,9 @@
 
 (defn find-method [method-name instance-methods parent-class]
   (let [method (instance-methods method-name)]
-    (if method
-      method
-      (if-not (= #'org.rathore.amit.frumios.core/OBJECT parent-class)
-	(find-method method-name (parent-class :methods) (parent-class :parent))))))
+    (or method
+	(if-not (= #'org.rathore.amit.frumios.core/OBJECT parent-class)
+	  (find-method method-name (parent-class :methods) (parent-class :parent))))))
 
 (defn parent-class-spec [sexprs]
   (let [extends-spec (filter #(= :extends (first %)) sexprs)
@@ -55,21 +52,19 @@
 	  (throw (RuntimeException. "the extends clause only accepts a single parent class")))
 	(last extends)))))
 
-(defn method [sexpr]
+(defn method-spec [sexpr]
   (let [name (keyword (second sexpr))
 	remaining (next sexpr)]
     {name (conj remaining 'fn)}))
 
-(defn methods-as-hash [sexprs]
-  (apply merge (map method sexprs)))
-
 (defn method-specs [sexprs]
-  (let [method? #(= 'method (first %))]
-    (filter method? sexprs)))
+  (let [method-spec? #(= 'method (first %))
+	specs (filter method-spec? sexprs)]
+    (apply merge (map method-spec sexprs))))
 
 (defmacro defclass [class-name & specs]
   (let [parent-class-symbol (parent-class-spec specs)
         this-class-name (keyword class-name)
-	fns (methods-as-hash (method-specs specs))]
+	fns (method-specs specs)]
     `(def ~class-name 
         (new-class ~this-class-name (var ~parent-class-symbol) ~(or fns {})))))
