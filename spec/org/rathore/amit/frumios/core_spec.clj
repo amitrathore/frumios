@@ -7,13 +7,17 @@
     (println "Hi" visitor ", I'm here!"))
 
   (method dob []
-    (println "I was born!"))
+    (str "I was born on " (this :get :birth-date)))
 
   (method age []
     2)
 
   (method experience [years]
-    (str years " years")))
+    (str years " years"))
+
+  (method bio []
+    (let [msg (str (this :dob) ", and have " (this :experience (this :age)) " of experience.")]
+      (println msg))))
 
 (defclass employee
   (:extends person)
@@ -39,7 +43,7 @@
   (is (= 2 (adi :get :age))))
 
 (deftest can-specify-methods
-  (= '(:experience :age :dob :greet) (person :method-names)))
+  (is (= '(:bio :experience :age :dob :greet) (person :method-names))))
 
 (deftest can-call-methods
   (is (= 2 (kyle :age)))

@@ -1,31 +1,8 @@
 (ns org.rathore.amit.frumios.core)
 
+(declare new-object)
+
 (def resolve-from-keyword (comp resolve symbol name))
-
-(defn new-object [klass]
-  (let [state (ref {})]
-    (fn [command & args]
-      (cond
-        (= :set! command)
-          (let [[k v] args]
-            (dosync (alter state assoc k v))
-            nil)
-        (= :get command)
-          (let [[key] args]
-            (state key))
-        (= :class command)
-          klass
-        :else
-          (let [method (klass :method command)]
-	    (if method 
-	      (apply method args)))))))
-
-(defn find-method [method-name instance-methods parent-class]
-  (let [method (instance-methods method-name)]
-    (if method
-      method
-      (if-not (= #'org.rathore.amit.frumios.core/OBJECT parent-class)
-	(find-method method-name (parent-class :methods) (parent-class :parent))))))
 
 (defn new-class [class-name parent methods]
   (let [klass (resolve-from-keyword class-name)]
@@ -43,6 +20,32 @@
 
 (def OBJECT (new-class :org.rathore.amit.frumios.core/OBJECT nil {}))
 (def this)
+
+(defn new-object [klass]
+  (let [state (ref {})]
+    (fn thiz [command & args]
+      (cond
+        (= :set! command)
+          (let [[k v] args]
+            (dosync (alter state assoc k v))
+            nil)
+        (= :get command)
+          (let [[key] args]
+            (state key))
+        (= :class command)
+          klass
+        :else
+          (let [method (klass :method command)]
+	    (if method 
+	      (binding [this thiz]
+		(apply method args))))))))
+
+(defn find-method [method-name instance-methods parent-class]
+  (let [method (instance-methods method-name)]
+    (if method
+      method
+      (if-not (= #'org.rathore.amit.frumios.core/OBJECT parent-class)
+	(find-method method-name (parent-class :methods) (parent-class :parent))))))
 
 (defn parent-class-spec [sexprs]
   (let [extends-spec (filter #(= :extends (first %)) sexprs)
