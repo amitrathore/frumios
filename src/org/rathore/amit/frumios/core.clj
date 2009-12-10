@@ -1,6 +1,6 @@
 (ns org.rathore.amit.frumios.core)
 
-(declare new-object)
+(declare new-object find-method) 
 
 (def resolve-from-keyword (comp resolve symbol name))
 
@@ -25,20 +25,16 @@
   (let [state (ref {})]
     (fn thiz [command & args]
       (cond
-        (= :set! command)
-          (let [[k v] args]
-            (dosync (alter state assoc k v))
-            nil)
-        (= :get command)
-          (let [[key] args]
-            (state key))
-        (= :class command)
-          klass
-        :else
-          (let [method (klass :method command)]
-	    (if method 
-	      (binding [this thiz]
-		(apply method args))))))))
+        (= :class command) klass
+        (= :set! command) (let [[k v] args]
+			    (dosync (alter state assoc k v))
+			    nil)
+        (= :get command) (let [[key] args]
+			   (state key))
+        :else (let [method (klass :method command)]
+		(if method 
+		  (binding [this thiz]
+		    (apply method args))))))))
 
 (defn find-method [method-name instance-methods parent-class]
   (let [method (instance-methods method-name)]
@@ -74,7 +70,6 @@
 (defmacro defclass [class-name & specs]
   (let [parent-class-symbol (parent-class-spec specs)
         this-class-name (keyword class-name)
-	fns (methods-as-hash (method-specs specs))
-	fns (or fns {})]
+	fns (methods-as-hash (method-specs specs))]
     `(def ~class-name 
-	  (new-class ~this-class-name (var ~parent-class-symbol) ~fns))))
+        (new-class ~this-class-name (var ~parent-class-symbol) ~(or fns {})))))

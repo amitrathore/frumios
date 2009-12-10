@@ -13,11 +13,14 @@
 (defclass cat
   (:extends animal)
   (method sound []
-    "meow!"))
+    "meow"))
 
 (def a (animal :new))
 (def c (cat :new))
 
+
+(deftest this-is-dynamic
+  (is (= "meow, I say!") (c :say)))
 
 ;frumios-spec> (a :sound)
 ;"grr"
