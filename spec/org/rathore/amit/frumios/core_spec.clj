@@ -16,7 +16,9 @@
     (str years " years")))
 
 (defclass employee
-  (:extends person))
+  (:extends person)
+  (method experience [years]
+    (str "Grade " years)))
 
 (def kyle (person :new))
 (def adi (employee :new))
@@ -44,5 +46,7 @@
   (is (= "12 years" (kyle :experience 12))))
 
 (deftest can-call-parent-methods
-  (is (= 2 (adi :age)))
-  (is (= "12 years" (adi :experience 12))))
+  (is (= 2 (adi :age))))
+
+(deftest can-override-parent-methods
+  (is (= "Grade 12" (adi :experience 12))))

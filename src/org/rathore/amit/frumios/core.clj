@@ -1,6 +1,6 @@
 (ns org.rathore.amit.frumios.core)
 
-(def k-resolve (comp resolve symbol name))
+(def resolve-from-keyword (comp resolve symbol name))
 
 (defn new-object [klass]
   (let [state (ref {})]
@@ -28,7 +28,7 @@
 	(find-method method-name (parent-class :methods) (parent-class :parent))))))
 
 (defn new-class [class-name parent methods]
-  (let [klass (k-resolve class-name)]
+  (let [klass (resolve-from-keyword class-name)]
     (fn [command & args]
       (cond
 	(= :parent command) parent
@@ -42,6 +42,7 @@
 	:else (throw (RuntimeException. (str "Unknown message: " command)))))))
 
 (def OBJECT (new-class :org.rathore.amit.frumios.core/OBJECT nil {}))
+(def this)
 
 (defn parent-class-spec [sexprs]
   (let [extends-spec (filter #(= :extends (first %)) sexprs)
